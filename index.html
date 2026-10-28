@@ -566,14 +566,15 @@ function resumen() {
   const gas = compras.reduce((s, c) => s + c.gasUsd, 0);
   const valor = eth * vivo.precio;
   const resultado = valor - invertido - gas;
-  const totalCompras = Math.max(1, Math.floor(cfg.tope / cfg.monto + 1e-9));
+  // El plan se mide en USDC usados (el monto por compra puede cambiar en el camino)
+  const faltan = Math.floor(Math.max(0, cfg.tope - invertido) / cfg.monto + 1e-9);
   const ultima = compras.at(-1);
   const proxima = ultima ? ultima.fecha + cfg.horas * 3600e3 : null;
   return {
     compras, invertido, eth, gas, valor, resultado,
     resultadoPct: invertido ? (resultado / invertido) * 100 : 0,
     promedio: eth ? invertido / eth : null,
-    totalCompras, completo: compras.length >= totalCompras, ultima, proxima,
+    faltan, completo: faltan === 0, ultima, proxima,
   };
 }
 
@@ -655,11 +656,11 @@ function pintar() {
   } else { texto("t-promedio", "—"); texto("t-promedio-sub", "aparece tras la primera compra"); }
 
   // Plan
-  const pct = Math.min(100, (r.compras.length / r.totalCompras) * 100);
+  const pct = Math.min(100, (r.invertido / cfg.tope) * 100);
   $("medidor-relleno").style.width = `${pct}%`;
   $("medidor").setAttribute("aria-valuenow", String(Math.round(pct)));
-  const faltan = Math.max(0, r.totalCompras - r.compras.length);
-  texto("presupuesto-texto", `${r.compras.length} de ${r.totalCompras} compras · ${fmtUsdc(r.invertido)} de ${fmtUsdc(cfg.tope)}${faltan ? ` · faltan ${faltan}` : ""}`);
+  const quedan = r.faltan === 1 ? "queda 1 compra" : `quedan ${r.faltan} compras`;
+  texto("presupuesto-texto", `${fmtUsdc(r.invertido)} de ${fmtUsdc(cfg.tope)} · ${r.compras.length} ${r.compras.length === 1 ? "compra hecha" : "compras hechas"}${r.faltan ? ` · ${quedan} de ${fmtUsdc(cfg.monto)}` : ""}`);
 
   pintarTabla(r);
   pintarBilletera(r);
@@ -699,8 +700,7 @@ function pintarBilletera(r) {
   filaLista(c, "USDC", fmtUsdc(vivo.usdc));
   if (!r.completo) {
     const alcanza = Math.floor(vivo.usdc / cfg.monto + 1e-9);
-    const faltan = r.totalCompras - r.compras.length;
-    filaLista(c, "USDC para el plan", alcanza >= faltan ? `alcanza ✓` : `alcanza para ${alcanza} de ${faltan}`);
+    filaLista(c, "USDC para el plan", alcanza >= r.faltan ? `alcanza ✓` : `alcanza para ${alcanza} de ${r.faltan}`);
   }
 }
 

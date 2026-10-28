@@ -7,7 +7,7 @@ Lee datos públicos de la blockchain de Base (saldos, compras y el precio de Cha
 La billetera que se muestra va en el enlace, después del `#`, y nunca se envía a este sitio:
 
 ```
-https://<usuario>.github.io/panel-dca/#direccion=0x…&monto=1&tope=8&horas=24
+https://<usuario>.github.io/panel-dca/#direccion=0x…&monto=5&tope=8&horas=24
 ```
 
 | Parámetro | Qué es |
