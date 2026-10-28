@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel DCA</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M16 6l7 10.5-7 4-7-4z' fill='white'/%3E%3Cpath d='M9 18l7 4 7-4-7 8z' fill='white' opacity='.75'/%3E%3C/svg%3E">
+<style>
+  /* Panel de solo lectura: resumen arriba, gráfico al medio, detalle abajo */
+  :root {
+    color-scheme: light;
+    --pagina: #f9f9f7;
+    --superficie: #fcfcfb;
+    --superficie-2: #f3f2ee;
+    --tinta: #0b0b0b;
+    --tinta-2: #52514e;
+    --tinta-3: #898781;
+    --rejilla: #e1e0d9;
+    --eje: #c3c2b7;
+    --borde: rgba(11, 11, 11, 0.10);
+    --serie-1: #2a78d6;
+    --serie-2: #eb6834;
+    --acento: #256abf;
+    --acento-tinta: #ffffff;
+    --acento-suave: #cde2fb;
+    --sube: #006300;
+    --baja: #d03b3b;
+    --bien: #0ca30c;
+    --alerta: #fab219;
+    --alerta-fondo: #fff4dc;
+    --error-fondo: #fbe9e9;
+    --sombra: 0 1px 2px rgba(11, 11, 11, 0.04), 0 4px 16px rgba(11, 11, 11, 0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --pagina: #0d0d0d;
+      --superficie: #1a1a19;
+      --superficie-2: #232322;
+      --tinta: #f0efec;
+      --tinta-2: #c3c2b7;
+      --tinta-3: #898781;
+      --rejilla: #2c2c2a;
+      --eje: #383835;
+      --borde: rgba(255, 255, 255, 0.10);
+      --serie-1: #3987e5;
+      --serie-2: #d95926;
+      --acento: #3987e5;
+      --acento-tinta: #0b0b0b;
+      --acento-suave: #22344d;
+      --sube: #0ca30c;
+      --baja: #e66767;
+      --alerta-fondo: #2e2510;
+      --error-fondo: #2e1616;
+      --sombra: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --pagina: #0d0d0d;
+    --superficie: #1a1a19;
+    --superficie-2: #232322;
+    --tinta: #f0efec;
+    --tinta-2: #c3c2b7;
+    --tinta-3: #898781;
+    --rejilla: #2c2c2a;
+    --eje: #383835;
+    --borde: rgba(255, 255, 255, 0.10);
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --acento: #3987e5;
+    --acento-tinta: #0b0b0b;
+    --acento-suave: #22344d;
+    --sube: #0ca30c;
+    --baja: #e66767;
+    --alerta-fondo: #2e2510;
+    --error-fondo: #2e1616;
+    --sombra: none;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body {
+    background: var(--pagina);
+    color: var(--tinta);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .contenedor {
+    max-width: 1120px; margin: 0 auto;
+    padding-block: 24px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; font-weight: 600; }
+  .sec { color: var(--tinta-2); font-size: 13px; }
+  .tenue { color: var(--tinta-3); }
+  .etiqueta { color: var(--tinta-2); font-size: 13px; }
+  a { color: var(--acento); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  [hidden] { display: none !important; }
+
+  .cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 16px; }
+  .marca { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+  .logo { width: 36px; height: 36px; flex: none; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 550;
+    background: var(--superficie); border: 1px solid var(--borde); color: var(--tinta); white-space: nowrap;
+  }
+  .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--bien); flex: none; }
+  .chip.vivo .punto { animation: latido 2s ease-in-out infinite; }
+  .chip.alerta .punto { background: var(--alerta); }
+  .chip.fin .punto { background: var(--tinta-3); }
+  .chip.error .punto { background: var(--baja); }
+  @keyframes latido { 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .chip.vivo .punto { animation: none; } }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  .boton {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: inherit; font-size: 14px; font-weight: 600;
+    padding: 8px 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
+  }
+  .boton:hover { background: var(--superficie-2); text-decoration: none; }
+  .boton.primario { background: var(--acento); color: var(--acento-tinta); border-color: transparent; }
+  .boton:focus-visible, .segmentado button:focus-visible, .lienzo:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+  .banda {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; font-size: 14px;
+    background: var(--superficie); border: 1px solid var(--borde);
+  }
+  .banda.info { background: color-mix(in srgb, var(--serie-1) 8%, var(--superficie)); }
+  .banda.alerta { background: var(--alerta-fondo); }
+  .banda.error { background: var(--error-fondo); }
+  .banda .icono { flex: none; }
+
+  .tarjeta {
+    background: var(--superficie); border: 1px solid var(--borde); border-radius: 16px;
+    padding: 18px 20px; box-shadow: var(--sombra); min-width: 0;
+  }
+  .rejilla { display: grid; gap: 12px; margin-bottom: 12px; }
+
+  .hero { grid-template-columns: 1fr auto; gap: 16px 32px; align-items: end; }
+  .hero-num { font-size: 52px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0; }
+  .delta { font-size: 15px; font-weight: 600; }
+  .delta.sube { color: var(--sube); }
+  .delta.baja { color: var(--baja); }
+  .delta.neutro { color: var(--tinta-2); }
+  .proxima { text-align: right; }
+  .cuenta { font-size: 28px; font-weight: 650; letter-spacing: -0.01em; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .tile .valor { font-size: 22px; font-weight: 650; margin: 4px 0 2px; letter-spacing: -0.01em; }
+
+  .presupuesto-cab { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .medidor { height: 10px; border-radius: 999px; background: var(--acento-suave); overflow: hidden; }
+  .medidor-relleno { height: 100%; width: 0; border-radius: 999px; background: var(--serie-1); transition: width 0.4s ease; }
+
+  .grafico-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .segmentado { display: inline-flex; background: var(--superficie-2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .segmentado button {
+    font: inherit; font-size: 13px; font-weight: 550; border: 0; background: transparent; color: var(--tinta-2);
+    padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  }
+  .segmentado button[aria-pressed="true"] { background: var(--superficie); color: var(--tinta); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+  .lienzo { position: relative; height: 290px; outline: none; transition: opacity 0.2s; }
+  .lienzo.cargando { opacity: 0.5; }
+  .lienzo svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .lienzo text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--tinta-3); font-variant-numeric: tabular-nums; }
+  .lienzo .etiqueta-dato { fill: var(--tinta); font-weight: 600; }
+  .lienzo .etiqueta-promedio { fill: var(--tinta-2); }
+  .lienzo .etiqueta-dato, .lienzo .etiqueta-promedio { paint-order: stroke; stroke: var(--superficie); stroke-width: 4px; stroke-linejoin: round; }
+  .vacio { position: absolute; inset: 0; display: grid; place-items: center; color: var(--tinta-3); font-size: 14px; text-align: center; }
+  .leyenda { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--tinta-2); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .clave-linea { width: 16px; height: 2px; border-radius: 2px; background: var(--serie-1); }
+  .clave-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--serie-2); }
+  .clave-prom { width: 16px; height: 0; border-top: 1px solid var(--tinta-2); }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 2; min-width: 150px;
+    background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px;
+    padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  }
+  .tooltip .fila { display: flex; align-items: center; gap: 8px; }
+  .tooltip .fila + .fila { margin-top: 4px; }
+  .tooltip .clave { width: 12px; height: 2px; border-radius: 2px; flex: none; }
+  .tooltip strong { font-weight: 650; }
+  .tooltip .cuando { color: var(--tinta-2); margin-bottom: 4px; }
+
+  .dos { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+  .tabla-caja { overflow-x: auto; margin: 10px -20px -6px; padding: 0 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 550; color: var(--tinta-2); font-size: 12px; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rejilla); white-space: nowrap; }
+  td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--rejilla); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; }
+  .vacio-tabla { padding: 18px 0 8px; color: var(--tinta-3); }
+  .lista { display: grid; gap: 10px; margin-top: 12px; }
+  .lista .fila { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .lista .fila span:first-child { color: var(--tinta-2); }
+  .lista .fila span:last-child { text-align: right; font-weight: 550; }
+  .direccion { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; }
+  .columna { display: grid; gap: 12px; min-width: 0; }
+  .pie { margin-top: 20px; text-align: center; color: var(--tinta-3); font-size: 12px; }
+
+  .config { display: grid; gap: 10px; max-width: 560px; }
+  .config label { display: grid; gap: 4px; font-size: 13px; color: var(--tinta-2); }
+  .config input {
+    font: inherit; font-size: 14px; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--borde); background: var(--pagina); color: var(--tinta); width: 100%;
+  }
+  .config .fila-campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+  main.cargando { opacity: 0.55; }
+
+  @media (max-width: 860px) {
+    .dos { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .contenedor { padding-block-start: 16px; }
+    .hero { grid-template-columns: 1fr; }
+    .proxima { text-align: left; }
+    .hero-num { font-size: 44px; }
+    .tarjeta { padding: 16px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .tile { padding: 14px; }
+    .tile .valor { font-size: 17px; }
+    .tabla-caja { margin: 10px -16px -6px; padding: 0 16px; }
+    .lienzo { height: 240px; }
+    .config .fila-campos { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header class="cabecera">
+    <div class="marca">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--serie-1)"/><path d="M16 6l7 10.5-7 4-7-4z" fill="#fff"/><path d="M9 18l7 4 7-4-7 8z" fill="#fff" opacity=".75"/></svg>
+      <div>
+        <h1>Bot DCA</h1>
+        <p class="sec">ETH / USDC · red Base · solo lectura</p>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip" id="chip-fuente"><span class="punto"></span><span>En vivo desde la blockchain</span></span>
+      <span class="chip" id="chip-estado"><span class="punto"></span><span id="chip-estado-texto">Cargando…</span></span>
+    </div>
+    <div class="acciones">
+      <a class="boton" id="enlace-actions" target="_blank" rel="noopener" hidden>⚙️ Ver en GitHub</a>
+      <a class="boton" id="enlace-basescan" target="_blank" rel="noopener" hidden>Basescan ↗</a>
+    </div>
+  </header>
+
+  <section class="tarjeta rejilla" id="configurar" hidden>
+    <h2>¿Qué billetera quieres ver?</h2>
+    <p class="sec">Pega la dirección pública de tu cuenta (empieza con 0x). Este panel solo lee datos públicos de la blockchain: no puede mover dinero.</p>
+    <form class="config" id="form-config">
+      <label for="campo-direccion">Dirección de la billetera
+        <input id="campo-direccion" name="direccion" placeholder="0x…" autocomplete="off" spellcheck="false" required>
+      </label>
+      <div class="fila-campos">
+        <label for="campo-monto">USDC por compra <input id="campo-monto" name="monto" inputmode="decimal" value="1"></label>
+        <label for="campo-tope">Tope total (USDC) <input id="campo-tope" name="tope" inputmode="decimal" value="8"></label>
+        <label for="campo-horas">Cada cuántas horas <input id="campo-horas" name="horas" inputmode="decimal" value="24"></label>
+      </div>
+      <div><button class="boton primario" type="submit">Ver panel</button></div>
+    </form>
+  </section>
+
+  <div class="banda info" id="aviso-carga" hidden><span class="icono">⏳</span><span id="aviso-carga-texto">Leyendo tus compras en la blockchain…</span></div>
+  <div class="banda alerta" id="aviso-atraso" hidden><span class="icono">⚠️</span><span id="aviso-atraso-texto"></span></div>
+  <div class="banda error" id="aviso-error" hidden><span class="icono">📡</span><span id="aviso-error-texto"></span></div>
+
+  <main id="principal" hidden>
+    <section class="tarjeta hero rejilla" aria-live="polite">
+      <div>
+        <p class="etiqueta">Valor actual del ETH que compró el bot</p>
+        <p class="hero-num" id="hero-valor">—</p>
+        <p class="delta neutro" id="hero-delta">—</p>
+      </div>
+      <div class="proxima">
+        <p class="etiqueta">Próxima compra</p>
+        <p class="cuenta" id="cuenta">—</p>
+        <p class="sec" id="proxima-fecha"></p>
+      </div>
+    </section>
+
+    <section class="rejilla tiles">
+      <div class="tarjeta tile">
+        <p class="etiqueta">Precio ETH ahora</p>
+        <p class="valor" id="t-precio">—</p>
+        <p class="sec" id="t-precio-sub">Chainlink</p>
+      </div>
+      <div class="tarjeta tile">
+        <p class="etiqueta">Invertido</p>
+        <p class="valor" id="t-invertido">—</p>
+        <p class="sec" id="t-invertido-sub"></p>
+      </div>
+      <div class="tarjeta tile">
+        <p class="etiqueta">ETH comprado</p>
+        <p class="valor" id="t-eth">—</p>
+        <p class="sec" id="t-eth-sub"></p>
+      </div>
+      <div class="tarjeta tile">
+        <p class="etiqueta">Tu precio promedio</p>
+        <p class="valor" id="t-promedio">—</p>
+        <p class="sec" id="t-promedio-sub"></p>
+      </div>
+    </section>
+
+    <section class="tarjeta rejilla">
+      <div class="presupuesto-cab">
+        <p class="etiqueta">Plan de compras</p>
+        <p class="sec" id="presupuesto-texto">—</p>
+      </div>
+      <div class="medidor" role="progressbar" aria-label="Plan de compras completado" aria-valuemin="0" aria-valuemax="100" id="medidor"><div class="medidor-relleno" id="medidor-relleno"></div></div>
+    </section>
+
+    <section class="tarjeta rejilla">
+      <div class="grafico-cab">
+        <div>
+          <h2>Precio de ETH</h2>
+          <p class="sec" id="grafico-sub">Tus compras aparecen como puntos</p>
+        </div>
+        <div class="segmentado" role="group" aria-label="Rango del gráfico">
+          <button type="button" data-dias="1" aria-pressed="false">24 h</button>
+          <button type="button" data-dias="7" aria-pressed="true">7 días</button>
+          <button type="button" data-dias="30" aria-pressed="false">30 días</button>
+        </div>
+      </div>
+      <div class="lienzo" id="lienzo" tabindex="0" aria-label="Gráfico del precio de ETH. Usa las flechas para recorrerlo."></div>
+      <div class="leyenda">
+        <span><i class="clave-linea"></i>Precio de ETH (USD)</span>
+        <span><i class="clave-punto"></i>Compras del bot</span>
+        <span id="leyenda-prom"><i class="clave-prom"></i>Tu precio promedio</span>
+      </div>
+    </section>
+
+    <div class="rejilla dos">
+      <section class="tarjeta">
+        <h2>Compras del bot</h2>
+        <div class="tabla-caja">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th class="num">Pagaste</th><th class="num">Recibiste</th><th class="num">Precio ETH</th><th class="num">Gas</th><th>Detalle</th></tr>
+            </thead>
+            <tbody id="tabla-compras"></tbody>
+          </table>
+          <p class="vacio-tabla" id="tabla-vacia" hidden>Todavía no hay compras del bot en esta billetera.</p>
+        </div>
+      </section>
+      <div class="columna">
+        <section class="tarjeta">
+          <h2>Billetera en Base</h2>
+          <div class="lista" id="billetera"></div>
+        </section>
+        <section class="tarjeta">
+          <h2>Plan</h2>
+          <div class="lista" id="plan"></div>
+          <p class="sec" style="margin-top:12px"><a href="#" id="cambiar-billetera">Cambiar billetera o plan</a></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <p class="pie">Lee los datos públicos de la blockchain de Base y el historial de precios de CoinGecko · se actualiza cada minuto · este panel no puede comprar ni mover dinero</p>
+</div>
+
+<script>
+"use strict";
+// ---------- constantes de la red Base ----------
+const RPCS = ["https://base-rpc.publicnode.com", "https://mainnet.base.org"];
+const RPC_LOGS = "https://base-rpc.publicnode.com"; // la RPC oficial no permite buscar eventos
+const C = {
+  USDC: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+  WETH: "0x4200000000000000000000000000000000000006",
+  ROUTER: "0x2626664c2603336e57b271c5c0b26f421741e481", // Uniswap SwapRouter02: las compras del bot pasan por aquí
+  ORACULO: "0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70", // Chainlink ETH / USD
+};
+const TOPIC_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TOPIC_WITHDRAWAL = "0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65";
+const TRAMO = 49000; // bloques por consulta (publicnode acepta hasta 50.000)
+const BLOQUES_POR_DIA = 43200; // Base produce un bloque cada 2 s
+const LOC = (navigator.language || "es").toLowerCase().startsWith("es") ? navigator.language : "es";
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+
+// ---------- configuración desde el enlace ----------
+function leerConfig() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const p = new URLSearchParams(h.startsWith("0x") ? `direccion=${h}` : h);
+  const direccion = (p.get("direccion") || "").trim().toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(direccion)) return null;
+  const numero = (k, d) => { const n = Number(String(p.get(k) ?? d).replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : d; };
+  const desde = Number(p.get("desde"));
+  const repo = p.get("repo") || "";
+  return {
+    direccion,
+    monto: numero("monto", 1),
+    tope: numero("tope", 8),
+    horas: numero("horas", 24),
+    desde: Number.isInteger(desde) && desde > 0 ? desde : null,
+    repo: /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : "",
+  };
+}
+
+// ---------- formato ----------
+const num = (n, d = 2) => n.toLocaleString(LOC, { minimumFractionDigits: d, maximumFractionDigits: d });
+function usd(n, decimales) {
+  const a = Math.abs(n);
+  const d = decimales ?? (a > 0 && a < 1 ? 4 : 2);
+  return `${n < 0 ? "−" : ""}$${num(a, d)}`;
+}
+const fmtEth = (n) => `${num(n, 6)} ETH`;
+const fmtUsdc = (n) => `${num(n, 2)} USDC`;
+const fecha = (ms, o) => new Date(ms).toLocaleString(LOC, o);
+const fechaCorta = (ms) => fecha(ms, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fechaLarga = (ms) => fecha(ms, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+function hace(ms) {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 60) return `hace ${s} s`;
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 172800) return `hace ${Math.round(s / 3600)} h`;
+  return `hace ${Math.round(s / 86400)} días`;
+}
+function cuentaRegresiva(ms) {
+  const s = Math.max(0, Math.round((ms - Date.now()) / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), seg = s % 60;
+  if (h >= 48) return `${Math.floor(h / 24)} días ${h % 24} h`;
+  if (h > 0) return `${h} h ${String(m).padStart(2, "0")} min`;
+  if (m > 0) return `${m} min ${String(seg).padStart(2, "0")} s`;
+  return s > 0 ? `${seg} s` : "ahora";
+}
+const texto = (id, v) => { $(id).textContent = v; };
+const aNum = (unidades, decimales) => Number(BigInt(unidades)) / 10 ** decimales;
+
+// ---------- lectura de la blockchain ----------
+let idRpc = 0;
+async function rpc(metodo, params, urls = RPCS) {
+  let ultimoError;
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: ++idRpc, method: metodo, params }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || "error de la red");
+      return j.result;
+    } catch (e) {
+      ultimoError = e;
+    }
+  }
+  throw ultimoError;
+}
+
+// Ejecuta tareas con un máximo de 'limite' al mismo tiempo
+async function enParalelo(tareas, limite) {
+  const resultados = new Array(tareas.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(limite, tareas.length) }, async () => {
+    while (i < tareas.length) { const k = i++; resultados[k] = await tareas[k](); }
+  }));
+  return resultados;
+}
+
+const pad = (direccion) => "0x" + direccion.slice(2).padStart(64, "0");
+
+// Una compra del bot: transferencia de USDC desde tu cuenta, en una transacción enviada al router de Uniswap
+async function leerCompra(log) {
+  const tx = await rpc("eth_getTransactionByHash", [log.transactionHash]);
+  if (!tx || (tx.to || "").toLowerCase() !== C.ROUTER) return null;
+  const recibo = await rpc("eth_getTransactionReceipt", [log.transactionHash]);
+  if (!recibo || recibo.status !== "0x1") return null;
+  const retiro = recibo.logs.find((l) =>
+    l.address.toLowerCase() === C.WETH && l.topics[0] === TOPIC_WITHDRAWAL && l.topics[1].toLowerCase() === pad(C.ROUTER));
+  if (!retiro) return null;
+  const gas = BigInt(recibo.gasUsed) * BigInt(recibo.effectiveGasPrice || tx.gasPrice || "0x0") + BigInt(recibo.l1Fee || "0x0");
+  let ts = log.blockTimestamp ? parseInt(log.blockTimestamp, 16) : null;
+  if (!ts) ts = parseInt((await rpc("eth_getBlockByNumber", [log.blockNumber, false])).timestamp, 16);
+  return {
+    tx: log.transactionHash,
+    bloque: parseInt(log.blockNumber, 16),
+    fecha: ts * 1000,
+    usdc: BigInt(log.data).toString(),
+    eth: BigInt(retiro.data).toString(),
+    gasEth: gas.toString(),
+  };
+}
+
+function claveCache(cfg) {
+  return `panel-dca:${cfg.direccion}:${cfg.desde ?? "auto"}`;
+}
+function leerCache(cfg) {
+  try { return JSON.parse(localStorage.getItem(claveCache(cfg))) || null; } catch { return null; }
+}
+function guardarCache(cfg, cache) {
+  try { localStorage.setItem(claveCache(cfg), JSON.stringify(cache)); } catch { /* sin almacenamiento: se vuelve a leer la próxima vez */ }
+}
+
+// Busca compras nuevas desde el último bloque revisado (la primera vez revisa desde 'desde')
+async function actualizarCompras(cfg, ultimoBloque) {
+  const cache = leerCache(cfg) || { hasta: (cfg.desde ?? ultimoBloque - 30 * BLOQUES_POR_DIA) - 1, compras: [] };
+  if (cache.hasta >= ultimoBloque) return cache.compras;
+  const tramos = [];
+  for (let a = cache.hasta + 1; a <= ultimoBloque; a += TRAMO) tramos.push([a, Math.min(a + TRAMO - 1, ultimoBloque)]);
+  const primeraVez = !estado.compras;
+  let listos = 0;
+  const logs = (await enParalelo(tramos.map(([a, b]) => async () => {
+    const r = await rpc("eth_getLogs", [{
+      address: C.USDC,
+      fromBlock: "0x" + a.toString(16),
+      toBlock: "0x" + b.toString(16),
+      topics: [TOPIC_TRANSFER, pad(cfg.direccion)],
+    }], [RPC_LOGS]);
+    listos += 1;
+    if (primeraVez && tramos.length > 2) texto("aviso-carga-texto", `Leyendo tus compras en la blockchain… ${Math.round((listos / tramos.length) * 100)} %`);
+    return r;
+  }), 3)).flat();
+  const conocidas = new Set(cache.compras.map((c) => c.tx));
+  const nuevas = (await enParalelo(logs.filter((l) => !conocidas.has(l.transactionHash)).map((l) => () => leerCompra(l)), 3)).filter(Boolean);
+  cache.compras = [...cache.compras, ...nuevas].sort((x, y) => x.fecha - y.fecha);
+  cache.hasta = ultimoBloque;
+  guardarCache(cfg, cache);
+  return cache.compras;
+}
+
+async function leerVivo(cfg) {
+  const [bloqueHex, ethHex, usdcHex, ronda] = await Promise.all([
+    rpc("eth_blockNumber", []),
+    rpc("eth_getBalance", [cfg.direccion, "latest"]),
+    rpc("eth_call", [{ to: C.USDC, data: "0x70a08231" + pad(cfg.direccion).slice(2) }, "latest"]),
+    rpc("eth_call", [{ to: C.ORACULO, data: "0xfeaf968c" }, "latest"]),
+  ]);
+  const palabra = (i) => BigInt("0x" + ronda.slice(2 + 64 * i, 2 + 64 * (i + 1)));
+  return {
+    bloque: parseInt(bloqueHex, 16),
+    eth: aNum(ethHex, 18),
+    usdc: aNum(usdcHex, 6),
+    precio: Number(palabra(1)) / 1e8,
+    precioActualizado: Number(palabra(3)) * 1000,
+    leido: Date.now(),
+  };
+}
+
+// ---------- estado y cálculo ----------
+const estado = { cfg: null, vivo: null, compras: null, historial: { dias: "7", puntos: [], fuente: "" }, error: null };
+
+function resumen() {
+  const { cfg, vivo } = estado;
+  const compras = (estado.compras || []).map((c) => {
+    const usdc = aNum(c.usdc, 6), eth = aNum(c.eth, 18), gasEth = aNum(c.gasEth, 18);
+    return { ...c, usdcN: usdc, ethN: eth, precio: usdc / eth, gasUsd: gasEth * vivo.precio };
+  });
+  const invertido = compras.reduce((s, c) => s + c.usdcN, 0);
+  const eth = compras.reduce((s, c) => s + c.ethN, 0);
+  const gas = compras.reduce((s, c) => s + c.gasUsd, 0);
+  const valor = eth * vivo.precio;
+  const resultado = valor - invertido - gas;
+  const totalCompras = Math.max(1, Math.floor(cfg.tope / cfg.monto + 1e-9));
+  const ultima = compras.at(-1);
+  const proxima = ultima ? ultima.fecha + cfg.horas * 3600e3 : null;
+  return {
+    compras, invertido, eth, gas, valor, resultado,
+    resultadoPct: invertido ? (resultado / invertido) * 100 : 0,
+    promedio: eth ? invertido / eth : null,
+    totalCompras, completo: compras.length >= totalCompras, ultima, proxima,
+  };
+}
+
+// ---------- pintar ----------
+function filaLista(contenedor, etiqueta, valor) {
+  const f = document.createElement("div");
+  f.className = "fila";
+  const a = document.createElement("span");
+  a.textContent = etiqueta;
+  const b = document.createElement("span");
+  if (valor instanceof Node) b.append(valor); else b.textContent = valor;
+  f.append(a, b);
+  contenedor.append(f);
+}
+
+function enlaceExterno(href, textoVisible, clase) {
+  const a = document.createElement("a");
+  a.href = href; a.target = "_blank"; a.rel = "noopener";
+  if (clase) a.className = clase;
+  a.textContent = textoVisible;
+  return a;
+}
+
+function pintar() {
+  const { cfg, vivo } = estado;
+  if (!vivo || !estado.compras) return;
+  const r = resumen();
+  $("principal").hidden = false;
+  $("aviso-carga").hidden = true;
+  document.title = `${usd(vivo.precio, 0)} · Panel DCA`;
+
+  // Estado del plan
+  const chip = $("chip-estado");
+  chip.className = "chip";
+  const atraso = r.proxima ? Date.now() - r.proxima : 0;
+  let textoEstado;
+  if (r.completo) { chip.classList.add("fin"); textoEstado = "Plan completo"; }
+  else if (!r.ultima) { chip.classList.add("vivo"); textoEstado = "Esperando la primera compra"; }
+  else if (atraso <= 0) { chip.classList.add("vivo"); textoEstado = "Al día"; }
+  else if (atraso < 4 * 3600e3) { chip.classList.add("vivo"); textoEstado = "Compra en camino"; }
+  else { chip.classList.add("alerta"); textoEstado = "Compra atrasada"; }
+  texto("chip-estado-texto", textoEstado);
+  $("aviso-atraso").hidden = !(r.ultima && !r.completo && atraso >= 4 * 3600e3);
+  if (!$("aviso-atraso").hidden) {
+    texto("aviso-atraso-texto", `La compra tocaba ${hace(r.proxima)} y todavía no aparece. GitHub a veces se demora en despertar al bot; si pasan muchas horas, revisa la pestaña Actions de tu repositorio.`);
+  }
+
+  // Héroe
+  const delta = $("hero-delta");
+  texto("hero-valor", usd(r.valor, 2));
+  if (!r.compras.length) {
+    delta.className = "delta neutro";
+    delta.textContent = "Aún no hay compras del bot. La primera aparecerá aquí.";
+  } else {
+    const plano = Math.abs(r.resultado) < 0.005;
+    const sube = r.resultado >= 0;
+    const signo = sube ? "+" : "−";
+    delta.className = `delta ${plano ? "neutro" : sube ? "sube" : "baja"}`;
+    delta.textContent = `${plano ? "●" : sube ? "▲" : "▼"} ${signo}${usd(Math.abs(r.resultado), 2)} (${signo}${num(Math.abs(r.resultadoPct), 2)} %) frente a lo invertido, con gas incluido`;
+  }
+
+  // Próxima compra
+  if (r.completo) { texto("cuenta", "—"); texto("proxima-fecha", "Se completaron todas las compras del plan"); }
+  else if (!r.proxima) { texto("cuenta", "Pronto"); texto("proxima-fecha", "Cuando el bot haga su primera compra"); }
+  else if (r.proxima > Date.now()) { texto("cuenta", cuentaRegresiva(r.proxima)); texto("proxima-fecha", `a partir del ${fechaLarga(r.proxima)}`); }
+  else { texto("cuenta", "En la próxima revisión"); texto("proxima-fecha", "GitHub la hace la próxima vez que despierte al bot"); }
+
+  // Tiles
+  texto("t-precio", usd(vivo.precio));
+  texto("t-precio-sub", `Chainlink · ${hace(vivo.precioActualizado)}`);
+  texto("t-invertido", fmtUsdc(r.invertido));
+  texto("t-invertido-sub", `${r.compras.length} ${r.compras.length === 1 ? "compra" : "compras"}`);
+  texto("t-eth", fmtEth(r.eth));
+  texto("t-eth-sub", r.compras.length ? `vale ${usd(r.valor, 2)} hoy` : "—");
+  if (r.promedio) {
+    texto("t-promedio", usd(r.promedio));
+    const dif = ((vivo.precio - r.promedio) / r.promedio) * 100;
+    texto("t-promedio-sub", `ETH está ${num(Math.abs(dif), 2)} % ${dif >= 0 ? "por encima" : "por debajo"}`);
+  } else { texto("t-promedio", "—"); texto("t-promedio-sub", "aparece tras la primera compra"); }
+
+  // Plan
+  const pct = Math.min(100, (r.compras.length / r.totalCompras) * 100);
+  $("medidor-relleno").style.width = `${pct}%`;
+  $("medidor").setAttribute("aria-valuenow", String(Math.round(pct)));
+  const faltan = Math.max(0, r.totalCompras - r.compras.length);
+  texto("presupuesto-texto", `${r.compras.length} de ${r.totalCompras} compras · ${fmtUsdc(r.invertido)} de ${fmtUsdc(cfg.tope)}${faltan ? ` · faltan ${faltan}` : ""}`);
+
+  pintarTabla(r);
+  pintarBilletera(r);
+  pintarPlan(r);
+  $("leyenda-prom").hidden = !r.promedio;
+  dibujarGrafico();
+}
+
+function pintarTabla(r) {
+  const cuerpo = $("tabla-compras");
+  cuerpo.replaceChildren();
+  $("tabla-vacia").hidden = r.compras.length > 0;
+  for (const c of r.compras.slice().reverse()) {
+    const fila = document.createElement("tr");
+    const celda = (valor, clase) => {
+      const td = document.createElement("td");
+      if (clase) td.className = clase;
+      if (valor instanceof Node) td.append(valor); else td.textContent = valor;
+      fila.append(td);
+    };
+    celda(fechaCorta(c.fecha));
+    celda(fmtUsdc(c.usdcN), "num");
+    celda(fmtEth(c.ethN), "num");
+    celda(usd(c.precio), "num");
+    celda(usd(c.gasUsd), "num");
+    celda(enlaceExterno(`https://basescan.org/tx/${c.tx}`, "Basescan ↗"));
+    cuerpo.append(fila);
+  }
+}
+
+function pintarBilletera(r) {
+  const { cfg, vivo } = estado;
+  const c = $("billetera");
+  c.replaceChildren();
+  filaLista(c, "Cuenta", enlaceExterno(`https://basescan.org/address/${cfg.direccion}`, `${cfg.direccion.slice(0, 6)}…${cfg.direccion.slice(-4)} ↗`, "direccion"));
+  filaLista(c, "ETH", `${fmtEth(vivo.eth)} (${usd(vivo.eth * vivo.precio, 2)})`);
+  filaLista(c, "USDC", fmtUsdc(vivo.usdc));
+  if (!r.completo) {
+    const alcanza = Math.floor(vivo.usdc / cfg.monto + 1e-9);
+    const faltan = r.totalCompras - r.compras.length;
+    filaLista(c, "USDC para el plan", alcanza >= faltan ? `alcanza ✓` : `alcanza para ${alcanza} de ${faltan}`);
+  }
+}
+
+function pintarPlan(r) {
+  const { cfg } = estado;
+  const c = $("plan");
+  c.replaceChildren();
+  const cada = cfg.horas === 24 ? "cada día" : `cada ${num(cfg.horas, cfg.horas % 1 ? 2 : 0)} h`;
+  filaLista(c, "Compra", `${fmtUsdc(cfg.monto)} ${cada}`);
+  filaLista(c, "Tope total", fmtUsdc(cfg.tope));
+  filaLista(c, "Última compra", r.ultima ? hace(r.ultima.fecha) : "—");
+  filaLista(c, "Quién compra", cfg.repo ? enlaceExterno(`https://github.com/${cfg.repo}/actions`, "GitHub Actions ↗") : "tu bot");
+}
+
+// ---------- gráfico ----------
+function svg(etiqueta, atributos, padre) {
+  const e = document.createElementNS(NS, etiqueta);
+  for (const [k, v] of Object.entries(atributos)) e.setAttribute(k, v);
+  if (padre) padre.append(e);
+  return e;
+}
+function pasoBonito(bruto) {
+  const exp = 10 ** Math.floor(Math.log10(bruto));
+  const f = bruto / exp;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * exp;
+}
+function puntosGrafico() {
+  const puntos = estado.historial.puntos.slice();
+  const v = estado.vivo;
+  if (v && (!puntos.length || v.leido > puntos.at(-1)[0])) puntos.push([v.leido, v.precio]);
+  return puntos;
+}
+
+let firmaGrafico = "";
+function dibujarGrafico() {
+  const lienzo = $("lienzo");
+  const puntos = puntosGrafico();
+  const ancho = lienzo.clientWidth, alto = lienzo.clientHeight;
+  const firma = [ancho, alto, estado.historial.dias, estado.historial.puntos.length, estado.historial.puntos.at(-1)?.[0], estado.vivo?.leido, estado.compras?.length].join("|");
+  if (firma === firmaGrafico) return;
+  firmaGrafico = firma;
+  lienzo.replaceChildren();
+  if (puntos.length < 2 || ancho === 0) {
+    const v = document.createElement("div");
+    v.className = "vacio";
+    v.textContent = "Cargando precios…";
+    lienzo.append(v);
+    return;
+  }
+  const r = resumen();
+  const m = { izq: 54, der: 70, arr: 14, aba: 26 };
+  const t0 = puntos[0][0], t1 = puntos.at(-1)[0];
+  const compras = r.compras.filter((c) => c.fecha >= t0);
+  const valores = puntos.map((p) => p[1]).concat(compras.map((c) => c.precio));
+  if (r.promedio) valores.push(r.promedio);
+  let min = Math.min(...valores), max = Math.max(...valores);
+  if (max - min < 1) { min -= 1; max += 1; }
+  const paso = pasoBonito((max - min) / 4);
+  const ymin = Math.floor(min / paso) * paso, ymax = Math.ceil(max / paso) * paso;
+  const x = (t) => m.izq + ((t - t0) / (t1 - t0)) * (ancho - m.izq - m.der);
+  const y = (v) => m.arr + ((ymax - v) / (ymax - ymin)) * (alto - m.arr - m.aba);
+  const raiz = svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, "aria-hidden": "true" }, lienzo);
+
+  for (let v = ymin; v <= ymax + paso / 2; v += paso) {
+    svg("line", { x1: m.izq, x2: ancho - m.der, y1: y(v), y2: y(v), stroke: v === ymin ? "var(--eje)" : "var(--rejilla)", "stroke-width": 1, "shape-rendering": "crispEdges" }, raiz);
+    svg("text", { x: m.izq - 8, y: y(v) + 4, "text-anchor": "end" }, raiz).textContent = usd(v, paso < 1 ? 2 : 0);
+  }
+
+  const dias = Number(estado.historial.dias);
+  const pasoX = dias <= 1 ? 4 * 3600e3 : dias <= 7 ? 86400e3 : 5 * 86400e3;
+  const inicio = new Date(t0);
+  if (dias <= 1) inicio.setMinutes(0, 0, 0); else inicio.setHours(0, 0, 0, 0);
+  let marcaX = inicio.getTime();
+  if (dias <= 1) while (new Date(marcaX).getHours() % 4) marcaX += 3600e3;
+  let ultimaEtiqueta = -Infinity;
+  for (; marcaX <= t1; marcaX += pasoX) {
+    if (marcaX < t0) continue;
+    const px = x(marcaX);
+    if (px > ancho - m.der - 20) break;
+    if (px - ultimaEtiqueta < 58) continue;
+    ultimaEtiqueta = px;
+    svg("text", { x: px, y: alto - 6, "text-anchor": "middle" }, raiz).textContent =
+      dias <= 1 ? fecha(marcaX, { hour: "2-digit", minute: "2-digit" }) : fecha(marcaX, { day: "numeric", month: "short" });
+  }
+
+  if (r.promedio && r.promedio >= ymin && r.promedio <= ymax) {
+    svg("line", { x1: m.izq, x2: ancho - m.der, y1: y(r.promedio), y2: y(r.promedio), stroke: "var(--tinta-2)", "stroke-width": 1, "shape-rendering": "crispEdges" }, raiz);
+    svg("text", { x: m.izq + 6, y: y(r.promedio) - 6, class: "etiqueta-promedio" }, raiz).textContent = `Tu promedio ${usd(r.promedio)}`;
+  }
+
+  const d = puntos.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  svg("path", { d, fill: "none", stroke: "var(--serie-1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, raiz);
+  const ultimo = puntos.at(-1);
+  svg("circle", { cx: x(ultimo[0]), cy: y(ultimo[1]), r: 4, fill: "var(--serie-1)", stroke: "var(--superficie)", "stroke-width": 2 }, raiz);
+  svg("text", { x: x(ultimo[0]) + 10, y: y(ultimo[1]) + 4, class: "etiqueta-dato" }, raiz).textContent = usd(ultimo[1], 0);
+
+  for (const c of compras) {
+    svg("circle", { cx: x(Math.min(c.fecha, t1)), cy: y(c.precio), r: 5, fill: "var(--serie-2)", stroke: "var(--superficie)", "stroke-width": 2 }, raiz);
+  }
+
+  const cruz = svg("line", { y1: m.arr, y2: alto - m.aba, stroke: "var(--eje)", "stroke-width": 1, visibility: "hidden" }, raiz);
+  const foco = svg("circle", { r: 4, fill: "var(--serie-1)", stroke: "var(--superficie)", "stroke-width": 2, visibility: "hidden" }, raiz);
+  const tip = document.createElement("div");
+  tip.className = "tooltip";
+  tip.hidden = true;
+  lienzo.append(tip);
+  const radioCompra = (t1 - t0) / 60;
+  let indice = puntos.length - 1;
+  function mostrar(i) {
+    indice = Math.max(0, Math.min(puntos.length - 1, i));
+    const [t, v] = puntos[indice];
+    const px = x(t), py = y(v);
+    cruz.setAttribute("x1", px); cruz.setAttribute("x2", px); cruz.setAttribute("visibility", "visible");
+    foco.setAttribute("cx", px); foco.setAttribute("cy", py); foco.setAttribute("visibility", "visible");
+    tip.replaceChildren();
+    const cuando = document.createElement("div");
+    cuando.className = "cuando";
+    cuando.textContent = fecha(t, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    tip.append(cuando);
+    const fila = (color, fuerte, resto) => {
+      const f = document.createElement("div");
+      f.className = "fila";
+      const k = document.createElement("i");
+      k.className = "clave";
+      k.style.background = color;
+      const s = document.createElement("strong");
+      s.textContent = fuerte;
+      const rs = document.createElement("span");
+      rs.className = "sec";
+      rs.textContent = resto;
+      f.append(k, s, rs);
+      tip.append(f);
+    };
+    fila("var(--serie-1)", usd(v), "precio ETH");
+    for (const c of compras.filter((c) => Math.abs(c.fecha - t) <= radioCompra)) fila("var(--serie-2)", fmtEth(c.ethN), `por ${fmtUsdc(c.usdcN)}`);
+    tip.hidden = false;
+    const izquierda = px + 14 + tip.offsetWidth > ancho ? px - 14 - tip.offsetWidth : px + 14;
+    tip.style.left = `${Math.max(0, izquierda)}px`;
+    tip.style.top = `${Math.max(0, Math.min(alto - tip.offsetHeight, py - tip.offsetHeight / 2))}px`;
+  }
+  function ocultar() { cruz.setAttribute("visibility", "hidden"); foco.setAttribute("visibility", "hidden"); tip.hidden = true; }
+  function masCercano(t) {
+    let a = 0, b = puntos.length - 1;
+    while (b - a > 1) { const mid = (a + b) >> 1; if (puntos[mid][0] < t) a = mid; else b = mid; }
+    return t - puntos[a][0] < puntos[b][0] - t ? a : b;
+  }
+  const capa = svg("rect", { x: m.izq, y: 0, width: ancho - m.izq - m.der + 10, height: alto, fill: "transparent" }, raiz);
+  capa.addEventListener("pointermove", (e) => {
+    const caja = raiz.getBoundingClientRect();
+    const px = ((e.clientX - caja.left) / caja.width) * ancho;
+    mostrar(masCercano(t0 + ((px - m.izq) / (ancho - m.izq - m.der)) * (t1 - t0)));
+  });
+  capa.addEventListener("pointerleave", ocultar);
+  lienzo.onfocus = () => mostrar(indice);
+  lienzo.onblur = ocultar;
+  lienzo.onkeydown = (e) => {
+    const salto = e.shiftKey ? 10 : 1;
+    if (e.key === "ArrowLeft") { mostrar(indice - salto); e.preventDefault(); }
+    if (e.key === "ArrowRight") { mostrar(indice + salto); e.preventDefault(); }
+    if (e.key === "Escape") ocultar();
+  };
+}
+
+const cacheHistorial = new Map();
+async function cargarHistorial(dias) {
+  $("lienzo").classList.add("cargando");
+  try {
+    const guardado = cacheHistorial.get(dias);
+    let puntos = guardado && Date.now() - guardado.t < 10 * 60e3 ? guardado.puntos : null;
+    if (!puntos) {
+      const r = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=${dias}`, { signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      puntos = (await r.json()).prices;
+      cacheHistorial.set(dias, { t: Date.now(), puntos });
+    }
+    estado.historial = { dias, puntos };
+    texto("grafico-sub", "Tus compras aparecen como puntos · precios de CoinGecko y Chainlink");
+  } catch {
+    estado.historial = { dias, puntos: [] };
+    texto("grafico-sub", "No pude cargar el historial de precios. Reintento en unos minutos.");
+  } finally {
+    $("lienzo").classList.remove("cargando");
+    firmaGrafico = "";
+    dibujarGrafico();
+  }
+}
+
+// ---------- ciclo ----------
+let actualizando = false;
+async function actualizar() {
+  if (actualizando || !estado.cfg) return;
+  actualizando = true;
+  try {
+    const vivo = await leerVivo(estado.cfg);
+    estado.compras = await actualizarCompras(estado.cfg, vivo.bloque);
+    estado.vivo = vivo;
+    $("aviso-error").hidden = true;
+    $("chip-fuente").className = "chip vivo";
+    pintar();
+  } catch (e) {
+    $("chip-fuente").className = "chip error";
+    $("aviso-error").hidden = false;
+    texto("aviso-error-texto", estado.vivo
+      ? "No pude conectarme con la blockchain en este momento. Muestro los últimos datos y reintento en un minuto."
+      : "No pude conectarme con la blockchain. Revisa tu internet; reintento en un minuto.");
+  } finally {
+    actualizando = false;
+  }
+}
+
+function iniciar() {
+  estado.cfg = leerConfig();
+  if (!estado.cfg) {
+    $("configurar").hidden = false;
+    $("principal").hidden = true;
+    $("aviso-carga").hidden = true;
+    texto("chip-estado-texto", "Sin billetera");
+    return;
+  }
+  $("configurar").hidden = true;
+  $("aviso-carga").hidden = false;
+  const { cfg } = estado;
+  const basescan = $("enlace-basescan");
+  basescan.href = `https://basescan.org/address/${cfg.direccion}#tokentxns`;
+  basescan.hidden = false;
+  const actions = $("enlace-actions");
+  actions.hidden = !cfg.repo;
+  if (cfg.repo) actions.href = `https://github.com/${cfg.repo}/actions`;
+  actualizar();
+  cargarHistorial(estado.historial.dias);
+}
+
+$("form-config").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const direccion = $("campo-direccion").value.trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(direccion)) {
+    $("campo-direccion").setCustomValidity("La dirección debe empezar con 0x y tener 42 caracteres");
+    $("campo-direccion").reportValidity();
+    return;
+  }
+  const p = new URLSearchParams({ direccion, monto: $("campo-monto").value, tope: $("campo-tope").value, horas: $("campo-horas").value });
+  location.hash = p.toString();
+});
+$("campo-direccion").addEventListener("input", (e) => e.target.setCustomValidity(""));
+$("cambiar-billetera").addEventListener("click", (e) => {
+  e.preventDefault();
+  const cfg = estado.cfg;
+  if (cfg) { $("campo-direccion").value = cfg.direccion; $("campo-monto").value = cfg.monto; $("campo-tope").value = cfg.tope; $("campo-horas").value = cfg.horas; }
+  $("configurar").hidden = false;
+  $("configurar").scrollIntoView({ behavior: "smooth" });
+});
+for (const b of document.querySelectorAll(".segmentado button")) {
+  b.addEventListener("click", () => {
+    for (const o of document.querySelectorAll(".segmentado button")) o.setAttribute("aria-pressed", String(o === b));
+    cargarHistorial(b.dataset.dias);
+  });
+}
+window.addEventListener("hashchange", () => { estado.vivo = null; estado.compras = null; firmaGrafico = ""; iniciar(); });
+
+setInterval(actualizar, 60_000);
+setInterval(() => estado.cfg && cargarHistorial(estado.historial.dias), 10 * 60_000);
+setInterval(() => {
+  if (!estado.vivo || !estado.compras) return;
+  const r = resumen();
+  if (!r.completo && r.proxima && r.proxima > Date.now()) texto("cuenta", cuentaRegresiva(r.proxima));
+  texto("t-precio-sub", `Chainlink · ${hace(estado.vivo.precioActualizado)}`);
+}, 1000);
+new ResizeObserver(() => dibujarGrafico()).observe($("lienzo"));
+iniciar();
+</script>
+</body>
+</html>
